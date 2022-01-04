@@ -21,6 +21,7 @@
 - [x] Implement dataset readers
 - [ ] Make readers an independant python package
 - [ ] Read data directly from archive
+- [ ] Impl: Tests
 
 
 
