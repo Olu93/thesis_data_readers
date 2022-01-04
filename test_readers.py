@@ -7,7 +7,7 @@ reader = AbstractProcessLogReader(
     csv_path='data/RequestForPayment.csv',
     mode=TaskModes.SIMPLE,
 )
-# data = data.init_log(save=0)
+reader = reader.init_log(save=0)
 reader = reader.init_data()
 point = next(reader._generate_examples(DatasetModes.TRAIN))
 mode_combos = list(it.product(ShapeModes, ShapeModes))
