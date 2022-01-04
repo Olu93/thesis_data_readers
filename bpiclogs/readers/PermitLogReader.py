@@ -1,23 +1,28 @@
-from readers.AbstractProcessLogReader import AbstractProcessLogReader
+from .AbstractProcessLogReader import AbstractProcessLogReader
 import pandas as pd
 
-
-class SepsisLogReader(AbstractProcessLogReader):
-    COL_LIFECYCLE = "lifecycle:transition"
-
+class PermitLogReader(AbstractProcessLogReader):
     def __init__(self, **kwargs) -> None:
-        super().__init__(log_path='data/dataset_hospital_sepsis/Sepsis Cases - Event Log.xes', csv_path='data/Sepsis.csv', **kwargs)
+        super().__init__(log_path='data/dataset_bpic2020_tu_travel/PermitLog.xes',csv_path='data/PermitLog.csv', **kwargs)
 
     def preprocess_level_general(self):
-        super().preprocess_level_general(remove_cols=None)
-
+        
+        super().preprocess_level_general(remove_cols=[
+            'case:ProjectNumber',
+            'case:TaskNumber',
+            'case:ActivityNumber'
+        ])
+        
     def preprocess_level_specialized(self, **kwargs):
         super().preprocess_level_specialized(**kwargs)
-
-
+    
+    # def prepr
+    #     print("prep")
+        
+        
 if __name__ == '__main__':
-    reader = SepsisLogReader()
-    reader = reader.init_log(save=1) 
+    reader = PermitLogReader()
+    reader = reader.init_log(save=1)
     reader = reader.init_data()
     ds_counter = reader.get_dataset()
 

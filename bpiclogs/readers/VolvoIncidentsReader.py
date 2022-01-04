@@ -1,4 +1,4 @@
-from readers.AbstractProcessLogReader import AbstractProcessLogReader
+from .AbstractProcessLogReader import AbstractProcessLogReader
 import pandas as pd
 
 

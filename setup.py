@@ -10,7 +10,7 @@ classifiers = [
 ]
 
 setup(
-    name='BPICLogReaders',
+    name='bpiclogs',
     version='0.0.1',
     description='A reader package for specific logs within process mining',
     long_description=open('README.md').read() + '\n\n' + open('CHANGELOG.md').read(),

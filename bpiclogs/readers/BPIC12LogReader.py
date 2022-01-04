@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from readers.AbstractProcessLogReader import AbstractProcessLogReader
+from .AbstractProcessLogReader import AbstractProcessLogReader
 import random
 
 class BPIC12LogReader(AbstractProcessLogReader):

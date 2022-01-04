@@ -1,4 +1,4 @@
-from readers.AbstractProcessLogReader import AbstractProcessLogReader, CSVLogReader
+from .AbstractProcessLogReader import AbstractProcessLogReader
 import pandas as pd
 from pm4py.objects.log.util import dataframe_utils
 from pm4py.objects.conversion.log import converter as log_converter

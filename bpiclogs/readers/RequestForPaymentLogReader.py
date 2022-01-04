@@ -1,4 +1,4 @@
-from readers.AbstractProcessLogReader import AbstractProcessLogReader, TaskModes
+from .AbstractProcessLogReader import AbstractProcessLogReader
 import tensorflow as tf
 import category_encoders as ce
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
