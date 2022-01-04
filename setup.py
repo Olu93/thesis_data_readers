@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 # Follows https://www.youtube.com/watch?v=zhpI6Yhz9_4
+# Follows https://packaging.python.org/en/latest/tutorials/packaging-projects/
 
 classifiers = [
     'Development Status :: 4 - Beta',
