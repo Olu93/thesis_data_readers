@@ -1,5 +1,5 @@
 # %%
-from readers.AbstractProcessLogReader import AbstractProcessLogReader, DatasetModes, ShapeModes, TaskModes, test_dataset
+from src.thesis_data_readers.AbstractProcessLogReader import AbstractProcessLogReader, DatasetModes, ShapeModes, TaskModes, test_dataset
 import itertools as it
 
 reader = AbstractProcessLogReader(
