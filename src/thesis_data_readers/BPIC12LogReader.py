@@ -17,10 +17,8 @@ class BPIC12LogReader(AbstractProcessLogReader):
         WO = ('W_', 'O_')
         AWO = ('A_', 'W_', 'O_')
 
-    def __init__(self, **kwargs) -> None:
-        self.subset = kwargs.get('subset', BPIC12LogReader.subsets.AW)
-        if 'subset' in kwargs:
-            del kwargs['subset']
+    def __init__(self, subset=subsets.AW, **kwargs) -> None:
+        self.subset = subset
         super().__init__(log_path=DATA_FOLDER / 'dataset_bpic2012_financial_loan/financial_log.xes', csv_path=DATA_FOLDER_PREPROCESSED / 'FinancialLog.csv', **kwargs)
 
     def preprocess_level_general(self):
