@@ -5,7 +5,7 @@ from .AbstractProcessLogReader import AbstractProcessLogReader
 import pandas as pd
 
 
-class HospitalReader(AbstractProcessLogReader):
+class HospitalLogReader(AbstractProcessLogReader):
     COL_LIFECYCLE = "lifecycle:transition"
 
     def __init__(self, **kwargs) -> None:
@@ -23,7 +23,7 @@ class HospitalReader(AbstractProcessLogReader):
 
 
 if __name__ == '__main__':
-    reader = HospitalReader()
+    reader = HospitalLogReader()
     reader = reader.init_log(save=1)
     reader = reader.init_data()
     ds_counter = reader.get_dataset()
