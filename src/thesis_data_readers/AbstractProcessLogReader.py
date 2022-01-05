@@ -1,4 +1,4 @@
-import math
+import time
 import random
 from enum import IntEnum, auto, Enum
 from typing import Counter, Dict, Iterable, Iterator, List, Union
@@ -108,6 +108,8 @@ class AbstractProcessLogReader():
         return self
 
     def init_data(self):
+        start_time = time.time()
+
         self._original_data = self._original_data if self._original_data is not None else pd.read_csv(self.csv_path)
         self._original_data = dataframe_utils.convert_timestamp_columns_in_df(self._original_data)
         if self.debug:
@@ -118,31 +120,43 @@ class AbstractProcessLogReader():
         self.preprocess_level_specialized()
         self.register_vocabulary()
         self.compute_sequences()
+        
+        self.time_to_init_data = time.time() - start_time
         return self
 
     def viz_dfg(self, bg_color="transparent"):
+        start_time = time.time()
         dfg = dfg_discovery.apply(self.log)
         gviz = dfg_visualization.apply(dfg, log=self.log, variant=dfg_visualization.Variants.FREQUENCY)
         gviz.graph_attr["bgcolor"] = bg_color
+        self.time_to_viz_dfg = time.time() - start_time
         return dfg_visualization.view(gviz)
 
     def viz_bpmn(self, bg_color="transparent"):
+        start_time = time.time()
+
         process_tree = pm4py.discover_tree_inductive(self.log)
         bpmn_model = pm4py.convert_to_bpmn(process_tree)
         parameters = bpmn_visualizer.Variants.CLASSIC.value.Parameters
         gviz = bpmn_visualizer.apply(bpmn_model, parameters={parameters.FORMAT: 'png'})
         gviz.graph_attr["bgcolor"] = bg_color
+        self.time_to_viz_bpmn = time.time() - start_time
+
         return bpmn_visualizer.view(gviz)
 
     def viz_simple_process_map(self):
+        start_time = time.time()
         dfg, start_activities, end_activities = pm4py.discover_dfg(self.log)
+        self.time_to_viz_simple_process_map = time.time() - start_time
         return pm4py.view_dfg(dfg, start_activities, end_activities)
 
     def viz_process_map(self, bg_color="transparent"):
+        start_time = time.time()
         mapping = pm4py.discover_heuristics_net(self.log)
         parameters = hn_visualizer.Variants.PYDOTPLUS.value.Parameters
         gviz = hn_visualizer.apply(mapping, parameters={parameters.FORMAT: 'png'})
         # gviz.graph_attr["bgcolor"] = bg_color
+        self.time_to_viz_process_map = time.time() - start_time
         return hn_visualizer.view(gviz)
 
     @property
@@ -329,6 +343,10 @@ class AbstractProcessLogReader():
             "max_seq_len": self._max_seq_len,
             "distinct_trace_ratio": self._distinct_trace_ratio,
             "num_distinct_events": self._num_distinct_events,
+            "time_in_sec_data_init": self.time_to_init_data,
+            "time_in_sec_viz_dfg": self.time_to_viz_dfg,
+            "time_in_sec_viz_process_map": self.time_to_viz_process_map,
+            "time_in_sec_viz_bpmn": self.time_to_viz_bpmn,
         }
 
     @property
