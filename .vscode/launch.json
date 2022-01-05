@@ -15,7 +15,7 @@
       "name": "Load Reader",
       "type": "python",
       "request": "launch",
-      "module": "readers.${fileBasenameNoExtension}",
+      "module": "src.thesis_data_readers.${fileBasenameNoExtension}",
     }
   ]
 }

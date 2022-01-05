@@ -1,25 +1,24 @@
+from .misc.helper import test_reader
+from .misc.constants import DATA_FOLDER_PREPROCESSED, DATA_FOLDER
 from .AbstractProcessLogReader import AbstractProcessLogReader
 import pandas as pd
 
+
 class PermitLogReader(AbstractProcessLogReader):
     def __init__(self, **kwargs) -> None:
-        super().__init__(log_path='data/dataset_bpic2020_tu_travel/PermitLog.xes',csv_path='data/PermitLog.csv', **kwargs)
+        super().__init__(log_path=DATA_FOLDER / 'dataset_bpic2020_tu_travel/PermitLog.xes', csv_path=DATA_FOLDER_PREPROCESSED / 'PermitLog.csv', **kwargs)
 
     def preprocess_level_general(self):
-        
-        super().preprocess_level_general(remove_cols=[
-            'case:ProjectNumber',
-            'case:TaskNumber',
-            'case:ActivityNumber'
-        ])
-        
+
+        super().preprocess_level_general(remove_cols=['case:ProjectNumber', 'case:TaskNumber', 'case:ActivityNumber'])
+
     def preprocess_level_specialized(self, **kwargs):
         super().preprocess_level_specialized(**kwargs)
-    
+
     # def prepr
     #     print("prep")
-        
-        
+
+
 if __name__ == '__main__':
     reader = PermitLogReader()
     reader = reader.init_log(save=1)

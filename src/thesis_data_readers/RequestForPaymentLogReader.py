@@ -1,3 +1,5 @@
+from .misc.helper import test_reader
+from .misc.constants import DATA_FOLDER_PREPROCESSED, DATA_FOLDER
 from .AbstractProcessLogReader import AbstractProcessLogReader
 import tensorflow as tf
 import category_encoders as ce
@@ -6,7 +8,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 # Trick to assess cols {col:{'n_unique':len(self.data[col].unique()), 'dtype':self.data[col].dtype} for col in self.data.columns}
 class RequestForPaymentLogReader(AbstractProcessLogReader):
     def __init__(self, **kwargs) -> None:
-        super().__init__(log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path='data/RequestForPayment.csv', **kwargs)
+        super().__init__(log_path=DATA_FOLDER / 'dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path= DATA_FOLDER_PREPROCESSED / 'RequestForPayment.csv', **kwargs)
 
     def preprocess_level_general(self):
         super().preprocess_level_general(remove_cols=[

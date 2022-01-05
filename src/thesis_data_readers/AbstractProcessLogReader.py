@@ -74,6 +74,11 @@ class AbstractProcessLogReader():
     end_token: str = "<E>"
     start_token: str = "<S>"
     transform = None
+    time_to_init_data: int = None
+    time_to_viz_dfg: int = None
+    time_to_viz_bpmn: int = None
+    time_to_viz_process_map: int = None
+    time_to_viz_simple_process_map: int = None
 
     def __init__(self,
                  log_path: str,
@@ -335,6 +340,7 @@ class AbstractProcessLogReader():
 
     def get_data_statistics(self):
         return {
+            "class_name": type(self).__name__,
             "log_size": self._log_size,
             "min_seq_len": self._min_seq_len,
             "max_seq_len": self._max_seq_len,
