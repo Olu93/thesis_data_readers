@@ -119,8 +119,10 @@ class AbstractProcessLogReader():
         self.preprocess_level_general()
         self.preprocess_level_specialized()
         self.register_vocabulary()
-        self.compute_sequences()
-        
+        self.group_rows_into_traces()
+        self.gather_information_about_traces()
+        self.instantiate_dataset()
+
         self.time_to_init_data = time.time() - start_time
         return self
 
@@ -187,7 +189,7 @@ class AbstractProcessLogReader():
 
             self.preprocessors[col] = preprocessing.LabelEncoder().fit(self.data[col])
             self.data[col] = self.preprocessors[col].transform(self.data[col])
-        
+
         # Prepare timestamp
         self.data["month"] = self.data[self.col_timestamp].dt.month
         self.data["week"] = self.data[self.col_timestamp].dt.isocalendar().week
@@ -221,23 +223,22 @@ class AbstractProcessLogReader():
         self.vocab_len = len(self._vocab) + 1
         self._vocab_r = {idx: word for word, idx in self._vocab.items()}
 
-    def compute_sequences(self):
+    def group_rows_into_traces(self):
         self.data = self.data.replace({self.col_activity_id: self._vocab})
         self.grouped_traces = list(self.data.groupby(by=self.col_case_id))
-
         self._traces = {idx: df for idx, df in self.grouped_traces}
 
+    def gather_information_about_traces(self):
         self.length_distribution = Counter([len(tr) for tr in self._traces.values()])
         self.max_len = max(list(self.length_distribution.keys())) + 2
         self.min_len = min(list(self.length_distribution.keys())) + 2
         self.log_len = len(self._traces)
         self.feature_len = len(self.data.columns)
         self.idx_event_attribute = self.data.columns.get_loc(self.col_activity_id)
-        self.data_container = np.zeros([self.log_len, self.max_len, self.feature_len])
-        self.instantiate_dataset()
 
     def instantiate_dataset(self):
         print("Preprocess data")
+        self.data_container = np.zeros([self.log_len, self.max_len, self.feature_len])
         loader = tqdm(self._traces.items(), total=len(self._traces))
 
         for idx, (case_id, df) in enumerate(loader):
@@ -301,11 +302,7 @@ class AbstractProcessLogReader():
         for trace, target in zip(zip(*res_features), zip(*res_targets)):
             yield (trace, target)
 
-    def get_dataset(
-            self,
-            batch_size=1,
-            data_mode: DatasetModes = DatasetModes.TRAIN
-    ):
+    def get_dataset(self, batch_size=1, data_mode: DatasetModes = DatasetModes.TRAIN):
         feature_shapes = ((self.max_len, ), (self.max_len, self.feature_len - 1), (self.max_len, self.feature_len), (self.max_len, self.feature_len))
         feature_types = (tf.float32, tf.float32, tf.float32, tf.float32)
 
