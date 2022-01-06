@@ -47,7 +47,7 @@ stats_collector.append(test_reader(reader, True))
 reader.data.head()
 # %% -------------------------------------------------------------------------------
 reader = HospitalLogReader()
-stats_collector.append(test_reader(reader, True))
+stats_collector.append(test_reader(reader, True, with_viz_procmap=False))
 reader.data.head()
 # # %% -------------------------------------------------------------------------------
 # reader = SepsisLogReader()
