@@ -4,11 +4,12 @@ import pathlib
 # Follows https://packaging.python.org/en/latest/tutorials/packaging-projects/
 
 classifiers = [
-    'Development Status :: 4 - Beta',
-    'Intended Audience :: Science',
-    'License :: OSI Approved :: GPL v3 License',
-    'Operating System :: OS Independent',
-    'Programming Language :: Python :: 3',
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX :: Linux',
+    'Programming Language :: Python :: 3.7',
 ]
 CURR_DIR = pathlib.Path('.')
 
