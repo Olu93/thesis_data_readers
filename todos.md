@@ -19,9 +19,10 @@
     * [ ] BPIC 2019
     * [x] BPIC 2020
 - [x] Implement dataset readers
-- [ ] Make readers an independant python package
+- [x] Make readers an independant python package
 - [ ] Read data directly from archive
 - [ ] Impl: Tests
+- [x] Impl: Preprocessing
 
 
 

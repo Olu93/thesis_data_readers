@@ -29,7 +29,6 @@ reader.data.head()
 reader = DomesticDeclarationsLogReader()
 stats_collector.append(test_reader(reader, True))
 reader.data.head()
-
 # %% -------------------------------------------------------------------------------
 reader = PermitLogReader()
 stats_collector.append(test_reader(reader, True))
@@ -42,19 +41,19 @@ reader.data.head()
 reader = RequestForPaymentLogReader()
 stats_collector.append(test_reader(reader, True))
 reader.data.head()
-# # %% -------------------------------------------------------------------------------
-# reader = SepsisLogReader()
-# stats_collector.append(test_reader(reader, True))
-# reader.data.head()
-# # %% -------------------------------------------------------------------------------
-# reader = HospitalLogReader()
-# stats_collector.append(test_reader(reader, True))
-# reader.data.head()
 # %% -------------------------------------------------------------------------------
 reader = VolvoIncidentsReader()
 stats_collector.append(test_reader(reader, True))
 reader.data.head()
+# %% -------------------------------------------------------------------------------
+reader = HospitalLogReader()
+stats_collector.append(test_reader(reader, True))
+reader.data.head()
+# # %% -------------------------------------------------------------------------------
+# reader = SepsisLogReader()
+# stats_collector.append(test_reader(reader, True))
+# reader.data.head()
 
 # %% ------------------------------
-jsonlines.open('stats.jsonl', mode='w').write(stats_collector)
-pd.json_normalize([dict(jl, column_stats=None) for jl in stats_collector]).to_csv('stats.csv')
+jsonlines.open('statst.jsonl', mode='w').write_all(stats_collector)
+pd.json_normalize([dict(jl, column_stats=None) for jl in stats_collector]).to_csv('statst.csv')

@@ -163,7 +163,7 @@ class AbstractProcessLogReader():
             col: {
                 'name': col,
                 'diversity': df[col].nunique(False) / full_len,
-                'dtype': df[col].dtype.str,
+                'dtype': str(df[col].dtype),
                 'missing_ratio': df[col].isna().sum() / full_len,
                 'similarity_to_trace_num': 1 - (np.abs(df[col].nunique(False) - num_traces) / np.max([df[col].nunique(False), num_traces])),
                 '_num_unique': df[col].nunique(False),
