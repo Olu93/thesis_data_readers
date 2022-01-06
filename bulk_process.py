@@ -4,6 +4,8 @@ from src.thesis_data_readers.misc import constants
 from src.thesis_data_readers.misc.helper import test_reader
 import itertools as it
 import pandas as pd
+import jsonlines
+
 stats_collector = []
 
 # reader = AbstractProcessLogReader(
@@ -22,27 +24,37 @@ stats_collector = []
 # %% -------------------------------------------------------------------------------
 reader = BPIC12LogReader()
 stats_collector.append(test_reader(reader, True))
+reader.data.head()
 # %% -------------------------------------------------------------------------------
 reader = DomesticDeclarationsLogReader()
 stats_collector.append(test_reader(reader, True))
-# %% -------------------------------------------------------------------------------
-reader = HospitalLogReader()
-stats_collector.append(test_reader(reader, True))
+reader.data.head()
+
 # %% -------------------------------------------------------------------------------
 reader = PermitLogReader()
 stats_collector.append(test_reader(reader, True))
+reader.data.head()
 # %% -------------------------------------------------------------------------------
 reader = RabobankTicketsLogReader()
 stats_collector.append(test_reader(reader, True))
+reader.data.head()
 # %% -------------------------------------------------------------------------------
 reader = RequestForPaymentLogReader()
 stats_collector.append(test_reader(reader, True))
-# %% -------------------------------------------------------------------------------
-reader = SepsisLogReader()
-stats_collector.append(test_reader(reader, True))
+reader.data.head()
+# # %% -------------------------------------------------------------------------------
+# reader = SepsisLogReader()
+# stats_collector.append(test_reader(reader, True))
+# reader.data.head()
+# # %% -------------------------------------------------------------------------------
+# reader = HospitalLogReader()
+# stats_collector.append(test_reader(reader, True))
+# reader.data.head()
 # %% -------------------------------------------------------------------------------
 reader = VolvoIncidentsReader()
 stats_collector.append(test_reader(reader, True))
+reader.data.head()
 
-# %%
-pd.DataFrame(stats_collector).set_index("class_name")
+# %% ------------------------------
+jsonlines.open('stats.jsonl', mode='w').write(stats_collector)
+pd.json_normalize([dict(jl, column_stats=None) for jl in stats_collector]).to_csv('stats.csv')
