@@ -5,6 +5,8 @@ import pandas as pd
 from pm4py.objects.log.util import dataframe_utils
 from pm4py.objects.conversion.log import converter as log_converter
 import pm4py
+import category_encoders as ce
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
@@ -26,22 +28,22 @@ class RabobankTicketsLogReader(CSVLogReader):
         super().preprocess_level_general(remove_cols=None)
 
     def preprocess_level_specialized(self, **kwargs):
-        super().preprocess_level_specialized(**kwargs)
+        cat_encoder = ce.BaseNEncoder(verbose=1, return_df=True, base=2)
+        num_encoder = StandardScaler()
 
+        categorical_columns = list(self.data.select_dtypes('object').columns.drop([self.col_activity_id, self.col_case_id]))
+        # normalization_columns = list(self.data.select_dtypes('number').columns)
+        self.data = self.data.join(cat_encoder.fit_transform(self.data[categorical_columns]))
+
+        # self.data[normalization_columns] = num_encoder.fit_transform(self.data[normalization_columns])
+        self.data = self.data.drop(categorical_columns, axis=1)
+
+        self.preprocessors['categoricals'] = cat_encoder
+        self.preprocessors['normalized'] = num_encoder
+        super().preprocess_level_specialized(**kwargs)
 
     
     
 if __name__ == '__main__':
     reader = RabobankTicketsLogReader(debug=True)
-    # reader = reader.init_log(save=1)
-    reader = reader.init_data()
-    ds_counter = reader.get_dataset()
-
-    example = next(iter(ds_counter.batch(10)))
-    print(example[0][0].shape)
-    print(example[0][1].shape)
-    print(reader.get_data_statistics())
-    # print(data.get_example_trace_subset())
-    reader.viz_bpmn("white")
-    reader.viz_process_map("white")
-    reader.viz_dfg("white")
+    test_reader(reader, True)

@@ -27,6 +27,8 @@ from pm4py.visualization.heuristics_net import visualizer as hn_visualizer
 from sklearn import preprocessing
 import itertools as it
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import entropy
+
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
 
@@ -74,11 +76,7 @@ class AbstractProcessLogReader():
     end_token: str = "<E>"
     start_token: str = "<S>"
     transform = None
-    time_to_init_data: int = None
-    time_to_viz_dfg: int = None
-    time_to_viz_bpmn: int = None
-    time_to_viz_process_map: int = None
-    time_to_viz_simple_process_map: int = None
+    time_stats = {}
 
     def __init__(self,
                  log_path: str,
@@ -116,7 +114,10 @@ class AbstractProcessLogReader():
         start_time = time.time()
 
         self._original_data = self._original_data if self._original_data is not None else pd.read_csv(self.csv_path)
-        self._original_data = dataframe_utils.convert_timestamp_columns_in_df(self._original_data)
+        self._original_data = dataframe_utils.convert_timestamp_columns_in_df(
+            self._original_data,
+            timest_columns=[self.col_timestamp],
+        )
         if self.debug:
             display(self._original_data.head())
         parameters = {TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: self.col_case_id}
@@ -128,60 +129,50 @@ class AbstractProcessLogReader():
         self.gather_information_about_traces()
         self.instantiate_dataset()
 
-        self.time_to_init_data = time.time() - start_time
+        self.time_stats["full_data_preprocessing_pipeline"] = time.time() - start_time
         return self
 
-    def viz_dfg(self, bg_color="transparent"):
-        start_time = time.time()
-        dfg = dfg_discovery.apply(self.log)
-        gviz = dfg_visualization.apply(dfg, log=self.log, variant=dfg_visualization.Variants.FREQUENCY)
-        gviz.graph_attr["bgcolor"] = bg_color
-        self.time_to_viz_dfg = time.time() - start_time
-        return dfg_visualization.view(gviz)
+    # @staticmethod
+    # def gather_grp_column_statsitics(df: pd.DataFrame):
+    #     full_len = len(df)
+    #     return {col: {'name': col, 'entropy': entropy(df[col].value_counts()), 'dtype': df[col].dtype, 'missing_ratio': df[col].isna().sum() / full_len} for col in df.columns}
 
-    def viz_bpmn(self, bg_color="transparent"):
-        start_time = time.time()
-
-        process_tree = pm4py.discover_tree_inductive(self.log)
-        bpmn_model = pm4py.convert_to_bpmn(process_tree)
-        parameters = bpmn_visualizer.Variants.CLASSIC.value.Parameters
-        gviz = bpmn_visualizer.apply(bpmn_model, parameters={parameters.FORMAT: 'png'})
-        gviz.graph_attr["bgcolor"] = bg_color
-        self.time_to_viz_bpmn = time.time() - start_time
-
-        return bpmn_visualizer.view(gviz)
-
-    def viz_simple_process_map(self):
-        start_time = time.time()
-        dfg, start_activities, end_activities = pm4py.discover_dfg(self.log)
-        self.time_to_viz_simple_process_map = time.time() - start_time
-        return pm4py.view_dfg(dfg, start_activities, end_activities)
-
-    def viz_process_map(self, bg_color="transparent"):
-        start_time = time.time()
-        mapping = pm4py.discover_heuristics_net(self.log)
-        parameters = hn_visualizer.Variants.PYDOTPLUS.value.Parameters
-        gviz = hn_visualizer.apply(mapping, parameters={parameters.FORMAT: 'png'})
-        # gviz.graph_attr["bgcolor"] = bg_color
-        self.time_to_viz_process_map = time.time() - start_time
-        return hn_visualizer.view(gviz)
-
-    @property
-    def original_data(self):
-        return self._original_data.copy()
-
-    @original_data.setter
-    def original_data(self, data: pd.DataFrame):
-        self._original_data = data
-
-    def preprocess_level_general(self, **kwargs):
+    def preprocess_level_general(self, remove_cols=None, max_diversity_thresh=0.75, min_diversity=0.0, too_similar_thresh=0.6, missing_thresh=0.75, **kwargs):
         self.data = self.original_data
-        remove_cols = kwargs.get('remove_cols')
-        thresh = len(self.data) * 0.25
-        cols_to_remove = list({key: val for key, val in self.original_data.isna().sum().to_dict().items() if val > thresh}.keys())
         if remove_cols:
             self.data = self.data.drop(remove_cols, axis=1)
+        col_statistics = self._gather_column_statsitics(self.data.select_dtypes('object'))
+        col_statistics = {
+            col: dict(stats, is_useless=self._is_useless_col(stats, min_diversity, max_diversity_thresh, too_similar_thresh, missing_thresh))
+            for col, stats in col_statistics.items() if col not in [self.col_case_id, self.col_activity_id, self.col_timestamp]
+        }
+        col_statistics = {col: dict(stats, is_dropped=any(stats["is_useless"])) for col, stats in col_statistics.items()}
+        cols_to_remove = [col for col, val in col_statistics.items() if val["is_dropped"]]
         self.data = self.data.drop(cols_to_remove, axis=1)
+
+    def _is_useless_col(self, stats, min_diversity_thresh, max_diversity_thresh, similarity_ratio_thresh, missing_ratio_thresh):
+        has_reasonable_diversity = (stats.get("diversity") > min_diversity_thresh and stats.get("diversity") < max_diversity_thresh)
+        is_probably_unique_to_case = (stats.get("similarity_to_trace_num") > similarity_ratio_thresh)
+        is_missing_too_many = stats.get("missing_ratio") > missing_ratio_thresh
+        return (not has_reasonable_diversity), is_probably_unique_to_case, is_missing_too_many
+
+    def _gather_column_statsitics(self, df: pd.DataFrame):
+        full_len = len(df)
+        num_traces = df[self.col_case_id].nunique(False)
+        results = {
+            col: {
+                'name': col,
+                'diversity': df[col].nunique(False) / full_len,
+                'dtype': df[col].dtype,
+                'missing_ratio': df[col].isna().sum() / full_len,
+                'similarity_to_trace_num': 1 - (np.abs(df[col].nunique(False) - num_traces) / np.max([df[col].nunique(False), num_traces])),
+                '_num_unique': df[col].nunique(False),
+                '_num_rows': full_len,
+                '_num_traces': num_traces,
+            }
+            for col in df.columns
+        }
+        return results
 
     def preprocess_level_specialized(self, **kwargs):
         cols = kwargs.get('cols', self.data.columns)
@@ -278,11 +269,53 @@ class AbstractProcessLogReader():
         print(f"Train: {len(self.trace_train)} datapoints")
         print(f"Val: {len(self.trace_val)} datapoints")
 
-    def _heuristic_sample_size(self, sequence):
-        return range((len(sequence)**2 + len(sequence)) // 4)
+    def viz_dfg(self, bg_color="transparent"):
+        start_time = time.time()
+        dfg = dfg_discovery.apply(self.log)
+        gviz = dfg_visualization.apply(dfg, log=self.log, variant=dfg_visualization.Variants.FREQUENCY)
+        gviz.graph_attr["bgcolor"] = bg_color
+        self.time_stats["visualize_dfg"] = time.time() - start_time
+        return dfg_visualization.view(gviz)
 
-    def _heuristic_bounded_sample_size(self, sequence):
-        return range(min((len(sequence)**2 + len(sequence) // 4), 5))
+    def viz_bpmn(self, bg_color="transparent"):
+        start_time = time.time()
+
+        process_tree = pm4py.discover_tree_inductive(self.log)
+        bpmn_model = pm4py.convert_to_bpmn(process_tree)
+        parameters = bpmn_visualizer.Variants.CLASSIC.value.Parameters
+        gviz = bpmn_visualizer.apply(bpmn_model, parameters={parameters.FORMAT: 'png'})
+        gviz.graph_attr["bgcolor"] = bg_color
+        self.time_stats["visualize_bpmn"] = time.time() - start_time
+
+        return bpmn_visualizer.view(gviz)
+
+    def viz_simple_process_map(self):
+        start_time = time.time()
+        dfg, start_activities, end_activities = pm4py.discover_dfg(self.log)
+        self.time_stats["visualize_simple_procmap"] = time.time() - start_time
+        return pm4py.view_dfg(dfg, start_activities, end_activities)
+
+    def viz_process_map(self, bg_color="transparent"):
+        start_time = time.time()
+        mapping = pm4py.discover_heuristics_net(self.log)
+        parameters = hn_visualizer.Variants.PYDOTPLUS.value.Parameters
+        gviz = hn_visualizer.apply(mapping, parameters={parameters.FORMAT: 'png'})
+        # gviz.graph_attr["bgcolor"] = bg_color
+        self.time_stats["visualize_procmap"] = time.time() - start_time
+        return hn_visualizer.view(gviz)
+
+    def get_data_statistics(self):
+        return {
+            "class_name": type(self).__name__,
+            "log_size": self._log_size,
+            "min_seq_len": self._min_seq_len,
+            "max_seq_len": self._max_seq_len,
+            "distinct_trace_ratio": self._distinct_trace_ratio,
+            "num_distinct_events": self._num_distinct_events,
+            "time": self.time_stats,
+            "time_unit": "seconds",
+            "column_stats": self._gather_column_statsitics(self.data.reset_index()),
+        }
 
     def _generate_examples(self, data_mode: int = DatasetModes.TRAIN) -> Iterator:
         """Generator of examples for each split."""
@@ -318,6 +351,26 @@ class AbstractProcessLogReader():
             output_shapes=(feature_shapes, feature_shapes),
         ).batch(batch_size)
 
+    def _heuristic_sample_size(self, sequence):
+        return range((len(sequence)**2 + len(sequence)) // 4)
+
+    def _heuristic_bounded_sample_size(self, sequence):
+        return range(min((len(sequence)**2 + len(sequence) // 4), 5))
+
+    def _get_example_trace_subset(self, num_traces=10):
+        random_starting_point = random.randint(0, self._log_size - num_traces - 1)
+        df_traces = pd.DataFrame(self._traces.items()).set_index(0).sort_index()
+        example = df_traces[random_starting_point:random_starting_point + num_traces]
+        return [val for val in example.values]
+
+    @property
+    def original_data(self):
+        return self._original_data.copy()
+
+    @original_data.setter
+    def original_data(self, data: pd.DataFrame):
+        self._original_data = data
+
     @property
     def tokens(self) -> List[str]:
         return list(self._vocab.keys())
@@ -338,20 +391,6 @@ class AbstractProcessLogReader():
     def idx2vocab(self) -> List[str]:
         return self._vocab_r
 
-    def get_data_statistics(self):
-        return {
-            "class_name": type(self).__name__,
-            "log_size": self._log_size,
-            "min_seq_len": self._min_seq_len,
-            "max_seq_len": self._max_seq_len,
-            "distinct_trace_ratio": self._distinct_trace_ratio,
-            "num_distinct_events": self._num_distinct_events,
-            "time_in_sec_data_init": self.time_to_init_data,
-            "time_in_sec_viz_dfg": self.time_to_viz_dfg,
-            "time_in_sec_viz_process_map": self.time_to_viz_process_map,
-            "time_in_sec_viz_bpmn": self.time_to_viz_bpmn,
-        }
-
     @property
     def _log_size(self):
         return len(self._traces)
@@ -371,12 +410,6 @@ class AbstractProcessLogReader():
     @property
     def _num_distinct_events(self):
         return len([ev for ev in self.vocab2idx.keys() if ev not in [self.padding_token]])
-
-    def get_example_trace_subset(self, num_traces=10):
-        random_starting_point = random.randint(0, self._log_size - num_traces - 1)
-        df_traces = pd.DataFrame(self._traces.items()).set_index(0).sort_index()
-        example = df_traces[random_starting_point:random_starting_point + num_traces]
-        return [val for val in example.values]
 
 
 class CSVLogReader(AbstractProcessLogReader):

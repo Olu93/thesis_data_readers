@@ -2,7 +2,8 @@ from .misc.helper import test_reader
 from .misc.constants import DATA_FOLDER_PREPROCESSED, DATA_FOLDER
 from .AbstractProcessLogReader import AbstractProcessLogReader
 import pandas as pd
-
+import category_encoders as ce
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 class SepsisLogReader(AbstractProcessLogReader):
     COL_LIFECYCLE = "lifecycle:transition"
@@ -19,15 +20,4 @@ class SepsisLogReader(AbstractProcessLogReader):
 
 if __name__ == '__main__':
     reader = SepsisLogReader()
-    reader = reader.init_log(save=1)
-    reader = reader.init_data()
-    ds_counter = reader.get_dataset()
-
-    example = next(iter(ds_counter.batch(10)))
-    print(example[0][0].shape)
-    print(example[0][1].shape)
-    print(reader.get_data_statistics())
-    # print(data.get_example_trace_subset())
-    reader.viz_bpmn("white")
-    reader.viz_process_map("white")
-    reader.viz_dfg("white")
+    test_reader(reader, True)

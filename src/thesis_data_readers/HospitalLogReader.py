@@ -1,5 +1,7 @@
 from .misc.constants import DATA_FOLDER_PREPROCESSED, DATA_FOLDER
 from .misc.helper import test_reader
+import category_encoders as ce
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from .AbstractProcessLogReader import AbstractProcessLogReader
 import pandas as pd
@@ -12,26 +14,44 @@ class HospitalLogReader(AbstractProcessLogReader):
         super().__init__(log_path=DATA_FOLDER / 'dataset_bpic2011_hospital_gynocology/hospital_log.xes', csv_path=DATA_FOLDER_PREPROCESSED / 'HospitalTreatment.csv', **kwargs)
 
     def preprocess_level_general(self):
-        super().preprocess_level_general(remove_cols=None)
+        super().preprocess_level_general(remove_cols=[
+            "Activity code",
+            "lifecycle:transition",
+        ], max_diversity_thresh=0.9)  # To agressive for this dataset!
 
     def preprocess_level_specialized(self, **kwargs):
+        # redundant_cols = list(self.data.columns[self.data.columns.str.contains('code:')])
+        # all_unimportant_dates = list(self.data.columns[self.data.columns.str.contains('date:')])
+        time_columns = list(self.data.select_dtypes('datetimetz').columns.drop(self.col_timestamp))
+        self.data = self.data.drop(time_columns, axis=1)
+        # categorical_columns = [
+        #     "org:group",
+        #     "Specialism Code",
+        #     "Producer Code",
+        #     "Section",
+        # ]
+        categorical_columns = list(self.data.select_dtypes('object').columns.drop([self.col_activity_id, self.col_case_id]))
+
+        normalization_columns = list(self.data.select_dtypes('number').columns) 
+
+        # cat_encoder = ce.HashingEncoder(verbose=1, return_df=True)
+        # cat_encoder = ce.BaseNEncoder(verbose=1, return_df=True, base=1)
+        cat_encoder = ce.BaseNEncoder(verbose=1, return_df=True, base=2)
+        # cat_encoder = ce.BaseNEncoder(verbose=1, return_df=True, base=3)
+        num_encoder = StandardScaler()
+
+        self.data = self.data.join(cat_encoder.fit_transform(self.data[categorical_columns]))
+        self.data[normalization_columns] = num_encoder.fit_transform(self.data[normalization_columns])
+        self.data = self.data.drop(categorical_columns, axis=1)
+
+        self.preprocessors['categoricals'] = cat_encoder
+        self.preprocessors['normalized'] = num_encoder
         super().preprocess_level_specialized(**kwargs)
 
-    # def preprocess_level_specialized(self, **kwargs):
 
-    #     # self.data = self.data[self.data['lifecycle:transition']=='COMPLETE']
-
+# tmp = {key: AbstractProcessLogReader.gather_grp_column_statsitics(grp_df) for key, grp_df in self._original_data.groupby(self.col_case_id)}
+# {key:val for key, val in pd.json_normalize(list(tmp.values())).sum().items() if "entropy" in key}
 
 if __name__ == '__main__':
     reader = HospitalLogReader()
-    reader = reader.init_log(save=1)
-    reader = reader.init_data()
-    ds_counter = reader.get_dataset()
-
-    print(next(iter(ds_counter.take(10)))[0].shape)
-    print(next(iter(ds_counter))[0].shape)
-    print(reader.get_data_statistics())
-    # print(data.get_example_trace_subset())
-    # reader.viz_bpmn("white")
-    # reader.viz_process_map("white")
-    # reader.viz_dfg("white")
+    test_reader(reader, True)

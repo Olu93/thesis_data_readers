@@ -6,6 +6,7 @@ import category_encoders as ce
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 # Trick to assess cols {col:{'n_unique':len(self.data[col].unique()), 'dtype':self.data[col].dtype} for col in self.data.columns}
+# Trick to assess cols {col:{'n_unique':len(self._original_data[col].unique()), 'dtype':self._original_data[col].dtype} for col in self._original_data.columns}
 class RequestForPaymentLogReader(AbstractProcessLogReader):
     def __init__(self, **kwargs) -> None:
         super().__init__(log_path=DATA_FOLDER / 'dataset_bpic2020_tu_travel/RequestForPayment.xes', csv_path= DATA_FOLDER_PREPROCESSED / 'RequestForPayment.csv', **kwargs)
@@ -69,16 +70,5 @@ class RequestForPaymentLogReader(AbstractProcessLogReader):
 
 
 if __name__ == '__main__':
-    reader = RequestForPaymentLogReader(mode=TaskModes.SIMPLE).init_log(save=True).init_data()
-    reader = reader.init_log(save=1)
-    reader = reader.init_data()
-    ds_counter = reader.get_dataset()
-
-    example = next(iter(ds_counter.batch(10)))
-    print(example[0][0].shape)
-    print(example[0][1].shape)
-    print(reader.get_data_statistics())
-    # print(data.get_example_trace_subset())
-    reader.viz_bpmn("white")
-    reader.viz_process_map("white")
-    reader.viz_dfg("white")
+    reader = RequestForPaymentLogReader().init_log(save=True).init_data()
+    test_reader(reader, True)
