@@ -23,7 +23,7 @@ stats_collector = []
 # print(reader.get_data_statistics())
 # %% -------------------------------------------------------------------------------
 reader = BPIC12LogReader()
-stats_collector.append(test_reader(reader, True))
+stats_collector.append(test_reader(reader, False))
 reader.data.head()
 # %% -------------------------------------------------------------------------------
 reader = DomesticDeclarationsLogReader()

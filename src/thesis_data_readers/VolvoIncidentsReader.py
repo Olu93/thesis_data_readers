@@ -5,6 +5,7 @@ import pandas as pd
 import category_encoders as ce
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
+
 class VolvoIncidentsReader(AbstractProcessLogReader):
     COL_LIFECYCLE = "lifecycle:transition"
 

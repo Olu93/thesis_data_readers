@@ -9,7 +9,7 @@
       "name": "Load AbstractProcessLogReader",
       "type": "python",
       "request": "launch",
-      "module": "readers.AbstractProcessLogReader",
+      "module": "src.thesis_data_readers.AbstractProcessLogReader",
     },
     {
       "name": "Load Reader",

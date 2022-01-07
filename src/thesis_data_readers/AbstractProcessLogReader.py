@@ -120,8 +120,11 @@ class AbstractProcessLogReader():
         )
         if self.debug:
             display(self._original_data.head())
+
         parameters = {TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: self.col_case_id}
         self.log = self.log if self.log is not None else log_converter.apply(self._original_data, parameters=parameters, variant=TO_EVENT_LOG)
+        self._original_data[self.col_case_id] = self._original_data[self.col_case_id].astype('object')
+        self._original_data[self.col_activity_id] = self._original_data[self.col_activity_id].astype('object')
         self.preprocess_level_general()
         self.preprocess_level_specialized()
         self.register_vocabulary()

@@ -48,7 +48,7 @@ class BPIC12LogReader(AbstractProcessLogReader):
 
 if __name__ == '__main__':
     reader = BPIC12LogReader()
-    print(test_reader(reader, True))
+    print(test_reader(reader, False))
     # reader = reader.init_log(True)
     # reader = reader.init_data()
     # ds_counter = reader.get_dataset()

@@ -1,4 +1,11 @@
-import pathlib 
+import pathlib
+import importlib_resources
 
-DATA_FOLDER = pathlib.Path(__file__).parent.parent.parent.parent / "data" 
+DATA_FOLDER = importlib_resources.files(__package__).parent / "data"
+# DATA_FOLDER = importlib_resources.files("src.thesis_data_readers.data")
+#  pathlib.Path(__file__).parent.parent / "data"
 DATA_FOLDER_PREPROCESSED = DATA_FOLDER / "preprocessed"
+
+print("======================================")
+print(DATA_FOLDER)
+# print(importlib_resources.files(__package__).parent / "data")

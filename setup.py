@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 import pathlib
 # Follows https://www.youtube.com/watch?v=zhpI6Yhz9_4
 # Follows https://packaging.python.org/en/latest/tutorials/packaging-projects/
@@ -14,6 +14,7 @@ classifiers = [
 CURR_DIR = pathlib.Path('.')
 
 print(__package__)
+print(f"Found packages: {find_packages(where='src')}")
 setup(
     name='thesis_data_readers',
     version='0.0.1',
@@ -32,4 +33,5 @@ setup(
     install_requires=open(CURR_DIR / 'requirements.txt').read().split('\n'),
     python_requires='>=3.6',
     keywords="reader, xes, log, BPIC",
+    package_data={'': ['data/preprocessed/*.csv']}
 )
