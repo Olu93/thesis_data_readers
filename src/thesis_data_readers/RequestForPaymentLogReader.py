@@ -23,7 +23,7 @@ class RequestForPaymentLogReader(AbstractProcessLogReader):
     def preprocess_level_specialized(self, **kwargs):
         self.data[self.col_activity_id] = self.data[self.col_activity_id].replace(
             'Request For Payment ',
-            '',
+            'RfP ',
             regex=True,
         ).replace(
             ' ',

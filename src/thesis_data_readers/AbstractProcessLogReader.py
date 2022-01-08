@@ -1,7 +1,7 @@
 import time
 import random
 from enum import IntEnum, auto, Enum
-from typing import Counter, Dict, Iterable, Iterator, List, Union
+from typing import Counter, Dict, Iterable, Iterator, List, Tuple, Union
 import pathlib
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -28,6 +28,8 @@ from sklearn import preprocessing
 import itertools as it
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import entropy
+
+from thesis_data_readers.misc.constants import DATA_FOLDER, DATA_FOLDER_PREPROCESSED
 
 TO_EVENT_LOG = log_converter.Variants.TO_EVENT_LOG
 
@@ -234,6 +236,8 @@ class AbstractProcessLogReader():
         self.log_len = len(self._traces)
         self.feature_len = len(self.data.columns)
         self.idx_event_attribute = self.data.columns.get_loc(self.col_activity_id)
+        self.feature_shapes = ((self.max_len, ), (self.max_len, self.feature_len - 1), (self.max_len, self.feature_len), (self.max_len, self.feature_len))
+        self.feature_types = (tf.float32, tf.float32, tf.float32, tf.float32)
 
     def instantiate_dataset(self):
         print("Preprocess data")
@@ -244,7 +248,7 @@ class AbstractProcessLogReader():
             df_end = len(df) + 1
             self.data_container[idx, 1:df_end] = df.values
             self.data_container[idx, 0, self.idx_event_attribute] = self.vocab2idx[self.start_token]
-            self.data_container[idx, df_end, self.idx_event_attribute] = self.vocab2idx[self.start_token]
+            self.data_container[idx, df_end, self.idx_event_attribute] = self.vocab2idx[self.end_token]
 
         if self.mode == TaskModes.SIMPLE:
             self.traces = self.data_container, np.roll(self.data_container, -1, axis=1)
@@ -320,6 +324,7 @@ class AbstractProcessLogReader():
             "column_stats": self._gather_column_statsitics(self.data.reset_index()),
         }
 
+    # TODO: Change to less complicated output
     def _generate_examples(self, data_mode: int = DatasetModes.TRAIN) -> Iterator:
         """Generator of examples for each split."""
         data = None
@@ -331,28 +336,42 @@ class AbstractProcessLogReader():
         if DatasetModes(data_mode) == DatasetModes.TEST:
             data = (self.trace_test, self.target_test)
 
-        features, targets = data
-        feature_ids = list(range(self.feature_len))
-        tmp_feature_ids = list(feature_ids)
-        tmp_feature_ids.remove(self.idx_event_attribute)
-        ft_events, ft_full, ft_rest, ft_empty = features[:, :, self.idx_event_attribute], features, features[:, :, tmp_feature_ids], np.zeros_like(features)
-        tt_events, tt_full, tt_rest, tt_empty = targets[:, :, self.idx_event_attribute], targets, targets[:, :, tmp_feature_ids], np.zeros_like(targets)
-        res_features = (ft_events, ft_rest, ft_full, ft_empty)
-        res_targets = (tt_events, tt_rest, tt_full, tt_empty)
+        res_features, res_targets = self._prepare_input_data(*data)
 
         for trace, target in zip(zip(*res_features), zip(*res_targets)):
             yield (trace, target)
 
+    def _prepare_input_data(
+            self,
+            features: np.ndarray,
+            targets: np.ndarray = None,
+    ) -> Tuple[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+        feature_ids = list(range(self.feature_len))
+        tmp_feature_ids = list(feature_ids)
+        tmp_feature_ids.remove(self.idx_event_attribute)
+        ft_events, ft_full, ft_rest, ft_empty = features[:, :, self.idx_event_attribute], features, features[:, :, tmp_feature_ids], np.zeros_like(features)
+        res_features = (ft_events, ft_rest, ft_full, ft_empty)
+
+        if targets is not None:
+            tt_events, tt_full, tt_rest, tt_empty = targets[:, :, self.idx_event_attribute], targets, targets[:, :, tmp_feature_ids], np.zeros_like(targets)
+            res_targets = (tt_events, tt_rest, tt_full, tt_empty)
+            return res_features, res_targets
+        return res_features, None
+
     def get_dataset(self, batch_size=1, data_mode: DatasetModes = DatasetModes.TRAIN):
-        feature_shapes = ((self.max_len, ), (self.max_len, self.feature_len - 1), (self.max_len, self.feature_len), (self.max_len, self.feature_len))
-        feature_types = (tf.float32, tf.float32, tf.float32, tf.float32)
 
         return tf.data.Dataset.from_generator(
             self._generate_examples,
             args=[data_mode],
-            output_types=(feature_types, feature_types),
-            output_shapes=(feature_shapes, feature_shapes),
+            output_types=(self.feature_types, self.feature_types),
+            output_shapes=(self.feature_shapes, self.feature_shapes),
         ).batch(batch_size)
+
+    def prepare_input(self, features: np.ndarray, targets: np.ndarray = None):
+        return tf.data.Dataset.from_tensor_slices(self._prepare_input_data(features, targets))
+
+    def decode_matrix(self, data):
+        return np.array([[self.idx2vocab[i] for i in row] for row in data])
 
     def _heuristic_sample_size(self, sequence):
         return range((len(sequence)**2 + len(sequence)) // 4)
@@ -477,19 +496,14 @@ def test_dataset(reader: AbstractProcessLogReader, ds_mode=DatasetModes.TRAIN, i
 
 if __name__ == '__main__':
     reader = AbstractProcessLogReader(
-        log_path='data/dataset_bpic2020_tu_travel/RequestForPayment.xes',
-        csv_path='data/RequestForPayment.csv',
+        log_path=DATA_FOLDER / 'dataset_bpic2020_tu_travel/RequestForPayment.xes',
+        csv_path=DATA_FOLDER_PREPROCESSED / 'RequestForPayment.csv',
         mode=TaskModes.SIMPLE,
     )
     # data = data.init_log(save=0)
     reader = reader.init_data()
-    point = next(reader._generate_examples(DatasetModes.TRAIN))
-    mode_combos = list(it.product(ShapeModes, ShapeModes))
-    for combo in mode_combos:
-        test_dataset(reader, DatasetModes.TRAIN, *combo)
+    print(reader.prepare_input(reader.trace_test[0:1], reader.target_test[0:1]))
 
+    features, targets = reader._prepare_input_data(reader.trace_test[0:1], reader.target_test[0:1])
+    print(reader.decode_matrix(features[0]))
     print(reader.get_data_statistics())
-    # print(reader.get_example_trace_subset())
-    # data.viz_dfg("white")
-    # data.viz_bpmn("white")
-    # data.viz_process_map("white")
